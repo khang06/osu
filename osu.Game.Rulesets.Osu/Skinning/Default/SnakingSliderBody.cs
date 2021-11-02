@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Logging;
 using osu.Game.Rulesets.Objects.Drawables;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Objects;
@@ -57,6 +58,8 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
 
         private DrawableSlider drawableSlider;
 
+        private bool fullPathSetUp;
+
         [BackgroundDependencyLoader]
         private void load(DrawableHitObject drawableObject)
         {
@@ -102,6 +105,9 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
             // Generate the entire curve
             drawableSlider.HitObject.Path.GetPathToProgress(CurrentCurve, 0, 1);
             SetVertices(CurrentCurve);
+            // TODO: this still gets called twice
+            //Logger.Log($@"creating slider with {CurrentCurve.Count} vertices! (Refresh {PathRadius})", LoggingTarget.Performance, LogLevel.Important);
+            fullPathSetUp = true;
 
             // Force the body to be the final path size to avoid excessive autosize computations
             Path.AutoSizeAxes = Axes.Both;
@@ -144,9 +150,16 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
             SnakedStart = p0;
             SnakedEnd = p1;
 
-            drawableSlider.HitObject.Path.GetPathToProgress(CurrentCurve, p0, p1);
+            // Avoid recreating the curves if it isn't required
+            if (!(fullPathSetUp && p0 == 0 && p1 == 1))
+            {
+                drawableSlider.HitObject.Path.GetPathToProgress(CurrentCurve, p0, p1);
 
-            SetVertices(CurrentCurve);
+                SetVertices(CurrentCurve);
+                //Logger.Log($@"creating slider with {CurrentCurve.Count} vertices! (setRange {p0} {p1})", LoggingTarget.Performance, LogLevel.Important);
+
+                fullPathSetUp = false;
+            }
 
             // The bounding box of the path expands as it snakes, which in turn shifts the position of the path.
             // Depending on the direction of expansion, it may appear as if the path is expanding towards the position of the slider
