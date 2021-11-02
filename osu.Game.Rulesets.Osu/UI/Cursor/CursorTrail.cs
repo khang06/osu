@@ -5,6 +5,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions.EnumExtensions;
@@ -154,6 +155,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             return base.OnMouseMove(e);
         }
 
+        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         protected void AddTrail(Vector2 position)
         {
             if (InterpolateMovements)
@@ -177,6 +179,9 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                     float interval = partSize.X / 2.5f * IntervalMultiplier;
                     float stopAt = distance - (AvoidDrawingNearCursor ? interval : 0);
 
+                    // Avoid really long loops
+                    if (stopAt / interval > 1000)
+                        continue;
                     for (float d = interval; d < stopAt; d += interval)
                     {
                         lastPosition = pos1 + direction * d;
