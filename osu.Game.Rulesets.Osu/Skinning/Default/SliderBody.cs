@@ -93,6 +93,7 @@ namespace osu.Game.Rulesets.Osu.Skinning.Default
                 p.BorderColour = path?.BorderColour ?? Color4.White;
                 p.BorderSize = path?.BorderSize ?? 1;
                 p.Vertices = path?.Vertices ?? Array.Empty<Vector2>();
+                p.MaxRenderSize = path?.MaxRenderSize ?? new Vector2(4096, 4096); // TODO: don't hardcode this!!!
             });
         }
 
