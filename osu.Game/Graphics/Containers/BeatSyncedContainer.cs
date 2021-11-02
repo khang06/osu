@@ -110,6 +110,8 @@ namespace osu.Game.Graphics.Containers
             }
 
             double beatLength = timingPoint.BeatLength / Divisor;
+            if (beatLength <= 0)
+                return;
 
             while (beatLength < MinimumBeatLength)
                 beatLength *= 2;
