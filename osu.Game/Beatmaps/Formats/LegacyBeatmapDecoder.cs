@@ -375,6 +375,7 @@ namespace osu.Game.Beatmaps.Formats
             double time = getOffsetTime(Parsing.ParseDouble(split[0].Trim()));
             double beatLength = Parsing.ParseDouble(split[1].Trim());
             double speedMultiplier = beatLength < 0 ? 100.0 / -beatLength : 1;
+            bool generateTicks = !double.IsNaN(beatLength);
 
             TimeSignature timeSignature = TimeSignature.SimpleQuadruple;
             if (split.Length >= 3)
@@ -425,6 +426,7 @@ namespace osu.Game.Beatmaps.Formats
 #pragma warning restore 618
             {
                 SliderVelocity = speedMultiplier,
+                GenerateTicks = generateTicks,
             }, timingChange);
 
             var effectPoint = new EffectControlPoint

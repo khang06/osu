@@ -40,13 +40,17 @@ namespace osu.Game.Beatmaps.ControlPoints
             set => SliderVelocityBindable.Value = value;
         }
 
+        public bool GenerateTicks = true;
+
         public override bool IsRedundant(ControlPoint? existing)
             => existing is DifficultyControlPoint existingDifficulty
-               && SliderVelocity == existingDifficulty.SliderVelocity;
+               && SliderVelocity == existingDifficulty.SliderVelocity
+               && GenerateTicks;
 
         public override void CopyFrom(ControlPoint other)
         {
             SliderVelocity = ((DifficultyControlPoint)other).SliderVelocity;
+            GenerateTicks = ((DifficultyControlPoint)other).GenerateTicks;
 
             base.CopyFrom(other);
         }
