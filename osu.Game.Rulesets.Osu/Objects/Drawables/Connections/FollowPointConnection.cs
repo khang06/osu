@@ -6,6 +6,7 @@
 using System;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Pooling;
+using osu.Framework.Logging;
 using osu.Game.Rulesets.Objects;
 using osu.Game.Rulesets.Objects.Pooling;
 using osuTK;
@@ -20,6 +21,7 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables.Connections
         // Todo: These shouldn't be constants
         public const int SPACING = 32;
         public const double PREEMPT = 800;
+        public const int MAX_DISTANCE = 1500;
 
         public DrawablePool<FollowPoint> Pool;
 
@@ -63,34 +65,39 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables.Connections
 
             double finalTransformEndTime = startTime;
 
-            for (int d = (int)(SPACING * 1.5); d < distance - SPACING; d += SPACING)
+            // Don't try to make follow points if too many will be generated
+            //Logger.Log($@"attempting to create about {distance / SPACING} follow points", LoggingTarget.Performance, LogLevel.Important);
+            if (distance < MAX_DISTANCE)
             {
-                float fraction = (float)d / distance;
-                Vector2 pointStartPosition = startPosition + (fraction - 0.1f) * distanceVector;
-                Vector2 pointEndPosition = startPosition + fraction * distanceVector;
-
-                GetFadeTimes(start, end, (float)d / distance, out double fadeInTime, out double fadeOutTime);
-
-                FollowPoint fp;
-
-                AddInternal(fp = Pool.Get());
-
-                fp.ClearTransforms();
-                fp.Position = pointStartPosition;
-                fp.Rotation = rotation;
-                fp.Alpha = 0;
-                fp.Scale = new Vector2(1.5f * end.Scale);
-
-                fp.AnimationStartTime.Value = fadeInTime;
-
-                using (fp.BeginAbsoluteSequence(fadeInTime))
+                for (int d = (int)(SPACING * 1.5); d < distance - SPACING; d += SPACING)
                 {
-                    fp.FadeIn(end.TimeFadeIn);
-                    fp.ScaleTo(end.Scale, end.TimeFadeIn, Easing.Out);
-                    fp.MoveTo(pointEndPosition, end.TimeFadeIn, Easing.Out);
-                    fp.Delay(fadeOutTime - fadeInTime).FadeOut(end.TimeFadeIn).Expire();
+                    float fraction = (float)d / distance;
+                    Vector2 pointStartPosition = startPosition + (fraction - 0.1f) * distanceVector;
+                    Vector2 pointEndPosition = startPosition + fraction * distanceVector;
 
-                    finalTransformEndTime = fp.LifetimeEnd;
+                    GetFadeTimes(start, end, (float)d / distance, out double fadeInTime, out double fadeOutTime);
+
+                    FollowPoint fp;
+
+                    AddInternal(fp = Pool.Get());
+
+                    fp.ClearTransforms();
+                    fp.Position = pointStartPosition;
+                    fp.Rotation = rotation;
+                    fp.Alpha = 0;
+                    fp.Scale = new Vector2(1.5f * end.Scale);
+
+                    fp.AnimationStartTime.Value = fadeInTime;
+
+                    using (fp.BeginAbsoluteSequence(fadeInTime))
+                    {
+                        fp.FadeIn(end.TimeFadeIn);
+                        fp.ScaleTo(end.Scale, end.TimeFadeIn, Easing.Out);
+                        fp.MoveTo(pointEndPosition, end.TimeFadeIn, Easing.Out);
+                        fp.Delay(fadeOutTime - fadeInTime).FadeOut(end.TimeFadeIn).Expire();
+
+                        finalTransformEndTime = fp.LifetimeEnd;
+                    }
                 }
             }
 
