@@ -5,7 +5,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions.EnumExtensions;
@@ -155,7 +154,6 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
             return base.OnMouseMove(e);
         }
 
-        [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         protected void AddTrail(Vector2 position)
         {
             if (InterpolateMovements)
