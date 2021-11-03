@@ -23,7 +23,8 @@ namespace osu.Game.Rulesets.Osu.Replays
         {
             var position = Interpolation.ValueAt(CurrentTime, StartFrame.Position, EndFrame.Position, StartFrame.Time, EndFrame.Time);
 
-            inputs.Add(new MousePositionAbsoluteInput { Position = GamefieldToScreenSpace(position) });
+            if (!float.IsNaN(position.Length))
+                inputs.Add(new MousePositionAbsoluteInput { Position = GamefieldToScreenSpace(position) });
             inputs.Add(new ReplayState<OsuAction> { PressedActions = CurrentFrame?.Actions ?? new List<OsuAction>() });
         }
     }
