@@ -87,7 +87,7 @@ namespace osu.Game.Rulesets.Objects.Legacy
                 if (split.Length > 7)
                 {
                     length = Math.Max(0, Parsing.ParseDouble(split[7], Parsing.MAX_COORDINATE_VALUE));
-                    if (length == 0)
+                    if (length == 0 || double.IsNaN(length.Value))
                         length = null;
                 }
 
