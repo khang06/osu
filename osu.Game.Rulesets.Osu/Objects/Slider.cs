@@ -168,9 +168,12 @@ namespace osu.Game.Rulesets.Osu.Objects
 
             TimingControlPoint timingPoint = controlPointInfo.TimingPointAt(StartTime);
 
-            double scoringDistance = BASE_SCORING_DISTANCE * difficulty.SliderMultiplier * DifficultyControlPoint.SliderVelocity;
+            // slider velocity is completely ignored if the bpm is negative
+            double beatLength = timingPoint.BeatLength > 0 ? timingPoint.BeatLength : TimingControlPoint.DEFAULT_BEAT_LENGTH;
+            double sliderVelocity = timingPoint.BeatLength > 0 ? DifficultyControlPoint.SliderVelocity : 1;
+            double scoringDistance = BASE_SCORING_DISTANCE * difficulty.SliderMultiplier * sliderVelocity;
 
-            Velocity = scoringDistance / timingPoint.BeatLength;
+            Velocity = scoringDistance / beatLength;
             TickDistance = scoringDistance / difficulty.SliderTickRate * TickDistanceMultiplier;
             GenerateTicks = DifficultyControlPoint.GenerateTicks;
         }
