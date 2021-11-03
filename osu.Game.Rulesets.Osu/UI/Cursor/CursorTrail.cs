@@ -179,7 +179,10 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
                     // Avoid really long loops
                     if (stopAt / interval > 1000)
+                    {
+                        lastPosition = pos2;
                         continue;
+                    }
                     for (float d = interval; d < stopAt; d += interval)
                     {
                         lastPosition = pos1 + direction * d;

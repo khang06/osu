@@ -373,6 +373,9 @@ namespace osu.Game.Rulesets.Osu.Replays
                     break;
 
                 case Slider slider:
+                    if (slider.EndTime > int.MaxValue)
+                        break;
+
                     for (double j = GetFrameDelay(slider.StartTime); j < slider.Duration; j += GetFrameDelay(slider.StartTime + j))
                     {
                         Vector2 pos = slider.StackedPositionAt(j / slider.Duration);

@@ -33,7 +33,7 @@ namespace osu.Game.Extensions
         /// <param name="milliseconds">A duration in milliseconds.</param>
         /// <returns>A formatted duration string.</returns>
         public static LocalisableString ToFormattedDuration(this double milliseconds) =>
-            ToFormattedDuration(TimeSpan.FromMilliseconds(milliseconds));
+            ToFormattedDuration(TimeSpan.FromMilliseconds(Math.Min(milliseconds, long.MaxValue / TimeSpan.TicksPerMillisecond)));
 
         /// <summary>
         /// Get a formatted duration (dd:hh:mm:ss with days/hours omitted if zero).
