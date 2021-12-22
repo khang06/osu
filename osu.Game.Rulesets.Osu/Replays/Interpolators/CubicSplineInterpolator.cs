@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using osu.Framework.Utils;
 using osu.Game.Rulesets.Osu.Replays.Postprocessors;
 using osu.Game.Rulesets.Replays;
@@ -12,14 +10,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
     // port from danser
     public class CubicSplineInterpolator : ReplayInterpolator
     {
-        private Spline path = null;
+        private Spline path;
 
         private double lastTime = double.NegativeInfinity;
 
         private class Bezier
         {
             // no length needed for this
-            public Vector2[] Points;
+            public readonly Vector2[] Points;
 
             public Bezier(Vector2[] points)
             {
@@ -32,12 +30,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
                 //t = Math.Clamp(t, 0.0f, 1.0f);
                 var p = new Vector2();
                 int n = Points.Length - 1;
+
                 for (int i = 0; i <= n; i++)
                 {
                     float b = bernstein(i, n, t);
                     p.X += Points[i].X * b;
                     p.Y += Points[i].Y * b;
                 }
+
                 return p;
             }
 
@@ -46,11 +46,13 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
                 long r = 1;
                 if (k > n)
                     return 0;
+
                 for (long d = 1; d <= k; d++)
                 {
                     r *= n--;
                     r /= d;
                 }
+
                 return r;
             }
 
@@ -62,9 +64,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
         private class Spline
         {
-            public float[] Sections;
-            public Bezier[] Path;
-            public float Length;
+            public readonly float[] Sections;
+            public readonly Bezier[] Path;
+            public readonly float Length;
 
             public Spline(Bezier[] curves, float[] weights)
             {
@@ -94,7 +96,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
                     return Path[index].PointAt(0);
 
                 float bt = (float)(desiredWidth - Sections[index]) / (Sections[index + 1] - Sections[index]);
-                //float bt = (float)Interpolation.ValueAt(desiredWidth, 0.0, 1.0, Sections[index], Sections[index + 1], Framework.Graphics.Easing.InOutSine);
+                //float bt = (float)Interpolation.ValueAt(desiredWidth, 0.0, 1.0, Sections[index], Sections[index + 1], Framework.Graphics.Easing.InOutBack);
                 // TODO: this would be way nicer if it scaled based on the length of the next and previous curves
                 return Path[index].PointAt(bt);
             }
@@ -127,6 +129,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
             bi[1] = -0.25f;
             a[1] = (points[2] - points[0] - d[0]) / 4;
+
             for (int i = 2; i < n - 1; i++)
             {
                 bi[i] = -1 / (4 + bi[i - 1]);
@@ -136,13 +139,14 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
             for (int i = n - 2; i > 0; i--)
                 d[i] = a[i] + d[i + 1] * bi[i];
 
-            var bezierPoints = new List<Vector2>()
+            var bezierPoints = new List<Vector2>
             {
                 points[0],
                 points[0] + d[0]
             };
 
-            for (int i = 1; i < n - 1; i++) {
+            for (int i = 1; i < n - 1; i++)
+            {
                 bezierPoints.Add(points[i] - d[i]);
                 bezierPoints.Add(points[i]);
                 bezierPoints.Add(points[i] + d[i]);
@@ -165,10 +169,12 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
             var prunedFrames = new List<OsuAuto2BGenerator.OsuReplayFrameWithReason>(inputFrames.Count);
             double last = inputFrames[0].Time - 3000;
+
             for (int i = 0; i < inputFrames.Count; i++)
             {
                 if (Precision.AlmostEquals(inputFrames[i].Time, last, 1))
                     continue;
+
                 prunedFrames.Add(inputFrames[i]);
                 last = inputFrames[i].Time;
             }
@@ -180,6 +186,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
             var points = new List<Vector2>();
             var timing = new List<float>();
             float offset = 0;
+
             for (int i = 0; i < prunedFrames.Count; i++)
             {
                 var frame = prunedFrames[i];
@@ -206,6 +213,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
                 {
                     // ...
                 }
+
                 points.Add(frame.Position);
                 timing.Add((float)frame.Time - offset);
             }
@@ -217,7 +225,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
                 // TODO: lol
                 if (i > beziers.Length - 2)
                     break;
+
                 float diff = timing[i + 1] - timing[i];
+
                 if (diff > 600)
                 {
                     float scale = diff / 2;
@@ -237,10 +247,12 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
             if (Precision.AlmostEquals(frame.Time, lastTime, 1))
                 return;
+
             lastTime = frame.Time;
 
             // get the closest set of catmull parameters
             var lastFrame = (OsuReplayFrame)OutputFrames[^1];
+
             for (double t = lastFrame.Time + FrameInterval; t < frame.Time; t += FrameInterval)
             {
                 float p = (float)((t - InputFrames[0].Time) / (InputFrames[^1].Time - InputFrames[0].Time));

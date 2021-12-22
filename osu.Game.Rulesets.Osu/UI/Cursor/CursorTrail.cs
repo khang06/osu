@@ -18,6 +18,7 @@ using osu.Framework.Input;
 using osu.Framework.Input.Events;
 using osu.Framework.Layout;
 using osu.Framework.Timing;
+using osu.Game.Configuration;
 using osuTK;
 using osuTK.Graphics;
 using osuTK.Graphics.ES30;
@@ -174,7 +175,12 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                     float distance = diff.Length;
                     Vector2 direction = diff / distance;
 
+                    // TODO: make this configurable
+                    const bool smooth_cursor = true;
+
                     float interval = partSize.X / 2.5f * IntervalMultiplier;
+                    if (smooth_cursor)
+                        interval /= 2.0f;
                     float stopAt = distance - (AvoidDrawingNearCursor ? interval : 0);
 
                     // Avoid really long loops
@@ -183,6 +189,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                         lastPosition = pos2;
                         continue;
                     }
+
                     for (float d = interval; d < stopAt; d += interval)
                     {
                         lastPosition = pos1 + direction * d;
@@ -231,9 +238,18 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
             private IVertexBatch<TexturedTrailVertex> vertexBatch;
 
+            private bool rainbowTrail = true;
+
             public TrailDrawNode(CursorTrail source)
                 : base(source)
             {
+            }
+
+            [BackgroundDependencyLoader(true)]
+            private void load(OsuConfigManager config)
+            {
+                // TODO: fix config shit
+                rainbowTrail = config?.Get<bool>(OsuSetting.RainbowCursorTrail) ?? true;
             }
 
             public override void ApplyState()
@@ -283,12 +299,24 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                     if (time - part.Time >= 1)
                         continue;
 
+                    var color = Color4.White;
+                    if (rainbowTrail)
+                    {
+                        float partTime = part.Time;
+                        const double freq = 0.3;
+                        double red = Math.Sin(freq + partTime) * 127 + 128;
+                        double green = Math.Sin(freq + 2 + partTime) * 127 + 128;
+                        double blue = Math.Sin(freq + 4 + partTime) * 127 + 128;
+                        //Console.WriteLine("{0} {1} {2} {3}", time, red, green, blue);
+                        color = new Color4((byte)red, (byte)green, (byte)blue, 0xFF);
+                    }
+
                     vertexBatch.Add(new TexturedTrailVertex
                     {
                         Position = new Vector2(part.Position.X - size.X * originPosition.X, part.Position.Y + size.Y * (1 - originPosition.Y)),
                         TexturePosition = textureRect.BottomLeft,
                         TextureRect = new Vector4(0, 0, 1, 1),
-                        Colour = DrawColourInfo.Colour.BottomLeft.Linear,
+                        Colour = rainbowTrail ? color : DrawColourInfo.Colour.BottomLeft.Linear,
                         Time = part.Time
                     });
 
@@ -297,7 +325,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                         Position = new Vector2(part.Position.X + size.X * (1 - originPosition.X), part.Position.Y + size.Y * (1 - originPosition.Y)),
                         TexturePosition = textureRect.BottomRight,
                         TextureRect = new Vector4(0, 0, 1, 1),
-                        Colour = DrawColourInfo.Colour.BottomRight.Linear,
+                        Colour = rainbowTrail ? color : DrawColourInfo.Colour.BottomRight.Linear,
                         Time = part.Time
                     });
 
@@ -306,7 +334,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                         Position = new Vector2(part.Position.X + size.X * (1 - originPosition.X), part.Position.Y - size.Y * originPosition.Y),
                         TexturePosition = textureRect.TopRight,
                         TextureRect = new Vector4(0, 0, 1, 1),
-                        Colour = DrawColourInfo.Colour.TopRight.Linear,
+                        Colour = rainbowTrail ? color : DrawColourInfo.Colour.TopRight.Linear,
                         Time = part.Time
                     });
 
@@ -315,7 +343,7 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                         Position = new Vector2(part.Position.X - size.X * originPosition.X, part.Position.Y - size.Y * originPosition.Y),
                         TexturePosition = textureRect.TopLeft,
                         TextureRect = new Vector4(0, 0, 1, 1),
-                        Colour = DrawColourInfo.Colour.TopLeft.Linear,
+                        Colour = rainbowTrail ? color : DrawColourInfo.Colour.TopLeft.Linear,
                         Time = part.Time
                     });
                 }

@@ -330,8 +330,10 @@ namespace osu.Game.Rulesets.Osu.Objects.Drawables
             this.FadeOut(fade_out_time, Easing.OutQuint).Expire();
         }
 
-        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => SliderBody?.ReceivePositionalInputAt(screenSpacePos) ?? base.ReceivePositionalInputAt(screenSpacePos);
+        //public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => SliderBody?.ReceivePositionalInputAt(screenSpacePos) ?? base.ReceivePositionalInputAt(screenSpacePos);
 
+        // PATCH: super super shitty performance hack. path itself does not need positional input, only the objects within it
+        public override bool ReceivePositionalInputAt(Vector2 screenSpacePos) => false;
         private class DefaultSliderBody : PlaySliderBody
         {
         }

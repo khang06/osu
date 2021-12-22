@@ -20,10 +20,10 @@ namespace osu.Game.Rulesets.Osu.Replays
         private List<OsuReplayFrameWithReason> framesWithReason = new List<OsuReplayFrameWithReason>();
 
         // TODO: make this configurable
-        private ReplayInterpolator interpolator = new CubicSplineInterpolator();
+        private readonly ReplayInterpolator interpolator = new AutoPlusCubicSplineInterpolator();
 
         // TODO: doesn't handle dynamic circle size...
-        public double CircleSize => Beatmap.HitObjects[0].Radius;
+        public double CircleSize => Beatmap.HitObjects[0].Radius * 2;
 
         public OsuAuto2BGenerator(IBeatmap beatmap, IReadOnlyList<Mod> mods)
             : base(beatmap, mods)
@@ -38,12 +38,14 @@ namespace osu.Game.Rulesets.Osu.Replays
             addFrameWithReason(new OsuKeyUpReplayFrame(Beatmap.HitObjects[0].StartTime - 3000, new Vector2(256, 192)), FrameReason.HitCircle);
 
             List<TickTime> tickTimes = new List<TickTime>();
+
             void addCircleClick(OsuHitObject h)
             {
                 double startTime = h.StartTime;
 
                 // this is a workaround for nested hit object handling being inconsistent based on framerate
-                if (tickTimes.Count > 0) {
+                if (tickTimes.Count > 0)
+                {
                     int index = tickTimes.BinarySearch(new TickTime(startTime));
                     if (index < 0) index = ~index;
                     index = Math.Min(index, tickTimes.Count - 1);
@@ -56,7 +58,7 @@ namespace osu.Game.Rulesets.Osu.Replays
                         tickPos = tickTimes[index - 1].Position;
 
                     if (tickPos != null && Vector2.Distance(h.StackedPosition, tickPos.Value) > CircleSize)
-                        startTime += 5;
+                        startTime += 1;
                 }
 
                 addFrameWithReason(new OsuKeyUpReplayFrame(startTime, h.StackedPosition), FrameReason.HitCircle);
@@ -73,52 +75,49 @@ namespace osu.Game.Rulesets.Osu.Replays
                         addCircleClick(h);
                         break;
                     }
+
                     case Slider s:
                     {
-                        // TODO: still not hitting some ticks/ends, need to investigate how those are handled
-                        // hitting nested hit objects on sliders seems to be inconsistent
+                        // hitting nested hit objects on sliders seems to be inconsistent on normal lazer
                         addCircleClick(s);
                         double sliderLength = s.EndTime - s.StartTime;
-                        //if (sliderLength > 0)
+
+                        // it's impossible to hit nested slider objects if the slider ends instantly, so don't even try
+                        if (sliderLength > 1)
                         {
-                            var lastPos = s.StackedPosition;
-                            double lastTime = s.StartTime;
                             foreach (OsuHitObject n in s.NestedHitObjects)
                             {
                                 if (n is SliderHeadCircle)
                                     continue;
 
-                                var posAtTime = s.StackedPositionAt(Math.Floor(n.StartTime - s.StartTime) / sliderLength);
-                                //var posAtTime = n.StackedPosition;
-                                if (n is SliderTick)
-                                    posAtTime = n.StackedPosition;
-                                if (sliderLength <= 0)
-                                    posAtTime = s.StackedEndPosition;
+                                var reason = n is SliderTick || n is SliderRepeat ? FrameReason.SliderTick : FrameReason.SliderEnd;
+                                double tickTime = n.StartTime;
+                                var posAtTime = s.StackedPositionAt(Math.Floor(tickTime - s.StartTime) / sliderLength);
 
-                                FrameReason reason = n is SliderTick || n is SliderRepeat ? FrameReason.SliderTick : FrameReason.SliderEnd;
-                                //addFrameWithReason(new OsuReplayFrame(n.StartTime - 1, posAtTime, OsuAction.LeftButton), reason);
-                                addFrameWithReason(new OsuReplayFrame(n.StartTime, posAtTime, OsuAction.LeftButton), reason);
-                                //addFrameWithReason(new OsuReplayFrame(n.StartTime + 1, posAtTime, OsuAction.LeftButton), reason);
-                                
-                                lastPos = posAtTime;
-                                lastTime = n.StartTime;
-                                if (n is SliderTick || n is SliderRepeat)
+                                // HACK: super shitty hack to fc xnor xnor xnor, i have no idea why i need this
+                                addFrameWithReason(new OsuReplayFrame(tickTime - 1, posAtTime, OsuAction.LeftButton), reason);
+                                addFrameWithReason(new OsuReplayFrame(tickTime, posAtTime, OsuAction.LeftButton), reason);
+
+                                if (reason == FrameReason.SliderTick)
                                 {
-                                    int index = tickTimes.BinarySearch(new TickTime(n.StartTime));
+                                    int index = tickTimes.BinarySearch(new TickTime(tickTime));
                                     if (index < 0) index = ~index;
-                                    tickTimes.Insert(index, new TickTime(n.StartTime));
+                                    tickTimes.Insert(index, new TickTime(tickTime));
                                 }
                                 //AddFrameToReplay(new OsuKeyUpReplayFrame(n.StartTime, posAtTime));
                             }
                         }
+
                         //AddFrameToReplay(new OsuReplayFrame(s.EndTime, s.StackedEndPosition, OsuAction.LeftButton));
                         break;
                     }
+
                     case Spinner s:
                     {
                         if (s.SpinsRequired < 1)
                             break;
-                        spinTimes.Add(new SpinnerTime()
+
+                        spinTimes.Add(new SpinnerTime
                         {
                             StartTime = s.StartTime,
                             EndTime = s.EndTime
@@ -142,14 +141,111 @@ namespace osu.Game.Rulesets.Osu.Replays
             return postprocessFrames();
         }
 
+        private void combineOverlappingObjects()
+        {
+            var newFrames = new List<OsuReplayFrameWithReason>();
+            var queuedFrames = new List<OsuReplayFrameWithReason>();
+
+            void processQueuedFrames(FrameReason reason)
+            {
+                if (queuedFrames.Count != 0)
+                {
+                    // time or reason changed, time to process the queue!
+                    // TODO: can i do this better than O(n^2) worst case???
+                    bool overlapping = true;
+
+                    foreach (var x in queuedFrames)
+                    {
+                        foreach (var y in queuedFrames)
+                        {
+                            if (Vector2.Distance(x.Position, y.Position) > CircleSize)
+                            {
+                                overlapping = false;
+                                break;
+                            }
+                        }
+
+                        if (!overlapping)
+                            break;
+                    }
+
+                    if (overlapping)
+                    {
+                        // find the middle between all points
+                        // TODO: is this actually where they all overlap???
+                        double midX = 0;
+                        double midY = 0;
+
+                        foreach (var x in queuedFrames)
+                        {
+                            midX += x.Position.X;
+                            midY += x.Position.Y;
+                        }
+
+                        Vector2 middle = new Vector2((float)(midX / queuedFrames.Count), (float)(midY / queuedFrames.Count));
+
+                        // append to new frames
+                        foreach (var x in queuedFrames)
+                        {
+                            newFrames.Add(new OsuReplayFrameWithReason(new OsuReplayFrame(x.Time, middle, x.Actions.ToArray()), x.Reason));
+                        }
+                    }
+                    else
+                    {
+                        // just do it as-is if it's for hitcircles
+                        // otherwise, just take the position of the first one to avoid unnecessary effort
+                        // TODO: try and find the point where the most circles overlap
+                        if (reason == FrameReason.HitCircle)
+                        {
+                            foreach (var x in queuedFrames)
+                            {
+                                newFrames.Add(x);
+                            }
+                        }
+                        else
+                        {
+                            newFrames.Add(queuedFrames[0]);
+                        }
+                    }
+
+                    queuedFrames.Clear();
+                }
+            }
+
+            double lastTime = double.NegativeInfinity;
+            FrameReason? lastReason = null;
+
+            foreach (var f in framesWithReason)
+            {
+                if (!Precision.AlmostEquals(lastTime, f.Time) || lastReason != f.Reason)
+                {
+                    if (lastReason.HasValue)
+                        processQueuedFrames(lastReason.Value);
+                    lastTime = f.Time;
+                    lastReason = f.Reason;
+                }
+
+                queuedFrames.Add(f);
+            }
+
+            if (lastReason.HasValue)
+                processQueuedFrames(lastReason.Value);
+            framesWithReason = newFrames;
+        }
+
         private Replay postprocessFrames()
         {
+            // will not work with pippi mode on!
+            combineOverlappingObjects();
+
             // TODO: make this configurable
             interpolator.Init(framesWithReason, Frames, this);
 
-            double lastSliderEndTime = double.NegativeInfinity;
+            //double lastSliderEndTime = double.NegativeInfinity;
+
             foreach (var f in framesWithReason)
             {
+                /*
                 if (f.Reason == FrameReason.SliderEnd)
                 {
                     if (Precision.AlmostEquals(lastSliderEndTime, f.Time))
@@ -158,8 +254,10 @@ namespace osu.Game.Rulesets.Osu.Replays
                         continue; // it's not possible to hit multiple slider ends at once if their radii don't overlap
                         // TODO: that really needs to be handled better in the future
                     }
+
                     lastSliderEndTime = f.Time;
                 }
+                */
 
                 interpolator.Update(f);
 
@@ -190,7 +288,7 @@ namespace osu.Game.Rulesets.Osu.Replays
             {
                 if (spinnerTimes[max].EndTime >= spinnerTimes[i].StartTime)
                 {
-                    var time = new SpinnerTime()
+                    var time = new SpinnerTime
                     {
                         StartTime = Math.Min(spinnerTimes[max].StartTime, spinnerTimes[i].StartTime),
                         EndTime = Math.Max(spinnerTimes[max].EndTime, spinnerTimes[i].EndTime)
@@ -203,6 +301,7 @@ namespace osu.Game.Rulesets.Osu.Replays
                     spinnerTimes[max] = spinnerTimes[i];
                 }
             }
+
             max++;
 
             spinnerTimes.RemoveRange(max, spinnerTimes.Count - max);
@@ -243,10 +342,12 @@ namespace osu.Game.Rulesets.Osu.Replays
             public int Compare(OsuReplayFrameWithReason f1, OsuReplayFrameWithReason f2)
             {
                 int cmp = f1.Time.CompareTo(f2.Time);
+
                 if (cmp != 0 && !Precision.AlmostEquals(f1.Time, f2.Time))
                 {
                     return cmp;
                 }
+
                 return f1.Reason.CompareTo(f2.Reason);
             }
         }
@@ -257,9 +358,9 @@ namespace osu.Game.Rulesets.Osu.Replays
         public enum FrameReason
         {
             SliderTick, // Combo break if not handled
-            SliderEnd,  // One less combo if not handled
-            HitCircle,  // Can be handled regardless of frame order
-            Spinner,    // Who cares lol
+            SliderEnd, // One less combo if not handled
+            HitCircle, // Can be handled regardless of frame order
+            Spinner, // Who cares lol
         }
 
         private struct SpinnerTime
@@ -272,7 +373,8 @@ namespace osu.Game.Rulesets.Osu.Replays
         {
             public TickTime(double time)
                 : this(time, Vector2.Zero)
-            { }
+            {
+            }
 
             public TickTime(double time, Vector2 pos)
             {
@@ -285,8 +387,8 @@ namespace osu.Game.Rulesets.Osu.Replays
                 return Time.CompareTo(other.Time);
             }
 
-            public double Time;
-            public Vector2 Position;
+            public readonly double Time;
+            public readonly Vector2 Position;
         }
 
         public class OsuReplayFrameWithReason : OsuReplayFrame

@@ -37,6 +37,7 @@ namespace osu.Game.Overlays
             new OnlineSection(),
             new MaintenanceSection(),
             new DebugSection(),
+            new KhangStuffSection()
         };
 
         private readonly List<SettingsSubPanel> subPanels = new List<SettingsSubPanel>();

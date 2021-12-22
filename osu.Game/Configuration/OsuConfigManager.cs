@@ -170,6 +170,9 @@ namespace osu.Game.Configuration
             SetDefault(OsuSetting.EditorWaveformOpacity, 0.25f);
 
             SetDefault(OsuSetting.LastProcessedMetadataId, -1);
+
+            // Khang Stuff
+            SetDefault(OsuSetting.RainbowCursorTrail, true);
         }
 
         public IDictionary<OsuSetting, string> GetLoggableState() =>
@@ -374,5 +377,8 @@ namespace osu.Game.Configuration
         AutomaticallyDownloadWhenSpectating,
         ShowOnlineExplicitContent,
         LastProcessedMetadataId
+
+        // custom stuff
+        RainbowCursorTrail
     }
 }
