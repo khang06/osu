@@ -6,11 +6,6 @@ namespace osu.Game.Rulesets.Osu.Replays.Postprocessors
 {
     public class PippiPostprocessor : ReplayPostprocessor
     {
-        public void Init(OsuAuto2BGenerator autoGenerator)
-        {
-            Init(null, autoGenerator);
-        }
-
         public override void Init(List<OsuAuto2BGenerator.OsuReplayFrameWithReason> frames, OsuAuto2BGenerator autoGenerator)
         {
             base.Init(frames, autoGenerator);

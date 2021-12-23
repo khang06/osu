@@ -6,6 +6,7 @@ using osu.Game.Replays;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Beatmaps;
+using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.Osu.Objects;
 using osu.Game.Rulesets.Osu.Replays.Interpolators;
 using osu.Game.Rulesets.Osu.Replays.Postprocessors;
@@ -20,15 +21,29 @@ namespace osu.Game.Rulesets.Osu.Replays
         private List<OsuReplayFrameWithReason> framesWithReason = new List<OsuReplayFrameWithReason>();
 
         // TODO: make this configurable
-        private readonly ReplayInterpolator interpolator = new AutoPlusCubicSplineInterpolator();
+        private readonly ReplayInterpolator interpolator;
 
         // TODO: doesn't handle dynamic circle size...
         public double CircleSize => Beatmap.HitObjects[0].Radius * 2;
 
-        public OsuAuto2BGenerator(IBeatmap beatmap, IReadOnlyList<Mod> mods)
+        private bool pippiEnabled;
+
+        public OsuAuto2BGenerator(IBeatmap beatmap, IReadOnlyList<Mod> mods, OsuModAutoplay.InterpolationStyle style, bool pippi)
             : base(beatmap, mods)
         {
-            // empty...
+            interpolator = style switch
+            {
+                OsuModAutoplay.InterpolationStyle.CatmullRom => new CatmullRomInterpolator(),
+                OsuModAutoplay.InterpolationStyle.Cosine => new CosineInterpolator(),
+                OsuModAutoplay.InterpolationStyle.CubicSplineAutoPlus => new AutoPlusCubicSplineInterpolator(),
+                OsuModAutoplay.InterpolationStyle.CubicSplineDanser => new CubicSplineInterpolator(),
+                OsuModAutoplay.InterpolationStyle.Dummy => new DummyInterpolator(),
+                OsuModAutoplay.InterpolationStyle.FullCircle => new FullCircleInterpolator(),
+                OsuModAutoplay.InterpolationStyle.HalfCircle => new HalfCircleInterpolator(),
+                OsuModAutoplay.InterpolationStyle.Osu => new OsuInterpolator(),
+                _ => throw new InvalidOperationException("invalid interpolation style")
+            };
+            pippiEnabled = pippi;
         }
 
         public override Replay Generate()
@@ -94,8 +109,10 @@ namespace osu.Game.Rulesets.Osu.Replays
                                 double tickTime = n.StartTime;
                                 var posAtTime = s.StackedPositionAt(Math.Floor(tickTime - s.StartTime) / sliderLength);
 
-                                // HACK: super shitty hack to fc xnor xnor xnor, i have no idea why i need this
-                                addFrameWithReason(new OsuReplayFrame(tickTime - 1, posAtTime, OsuAction.LeftButton), reason);
+                                // HACK: super shitty hack to fc xnor xnor xnor [earth]
+                                // AutoPlusCubicSplineInterpolator seems to try to go way too fast here and slider breaks without this hack
+                                if (reason == FrameReason.SliderTick)
+                                    addFrameWithReason(new OsuReplayFrame(tickTime - 1, posAtTime, OsuAction.LeftButton), reason);
                                 addFrameWithReason(new OsuReplayFrame(tickTime, posAtTime, OsuAction.LeftButton), reason);
 
                                 if (reason == FrameReason.SliderTick)
@@ -172,7 +189,6 @@ namespace osu.Game.Rulesets.Osu.Replays
                     if (overlapping)
                     {
                         // find the middle between all points
-                        // TODO: is this actually where they all overlap???
                         double midX = 0;
                         double midY = 0;
 
@@ -193,8 +209,7 @@ namespace osu.Game.Rulesets.Osu.Replays
                     else
                     {
                         // just do it as-is if it's for hitcircles
-                        // otherwise, just take the position of the first one to avoid unnecessary effort
-                        // TODO: try and find the point where the most circles overlap
+                        // otherwise, try and find the circle position that would overlap with the most other circles for sliders
                         if (reason == FrameReason.HitCircle)
                         {
                             foreach (var x in queuedFrames)
@@ -204,7 +219,47 @@ namespace osu.Game.Rulesets.Osu.Replays
                         }
                         else
                         {
-                            newFrames.Add(queuedFrames[0]);
+                            //newFrames.Add(queuedFrames[0]);
+                            // TODO: still O(n^2)
+
+                            var bestFrame = queuedFrames[0];
+                            int bestFrameOverlapCount = 0;
+
+                            // figure out which frame overlaps with the most other circles
+                            foreach (var x in queuedFrames)
+                            {
+                                int curOverlapCount = 0;
+
+                                foreach (var y in queuedFrames)
+                                {
+                                    if (Vector2.Distance(x.Position, y.Position) < CircleSize)
+                                        curOverlapCount++;
+                                }
+
+                                if (curOverlapCount > bestFrameOverlapCount)
+                                {
+                                    bestFrame = x;
+                                    bestFrameOverlapCount = curOverlapCount;
+                                }
+                            }
+
+                            // now find the middle of all of those circles
+                            double midX = 0;
+                            double midY = 0;
+                            int count = 0;
+
+                            foreach (var x in queuedFrames)
+                            {
+                                if (Vector2.Distance(x.Position, bestFrame.Position) < CircleSize)
+                                {
+                                    midX += x.Position.X;
+                                    midY += x.Position.Y;
+                                    count++;
+                                }
+                            }
+
+                            Vector2 middle = new Vector2((float)(midX / count), (float)(midY / count));
+                            newFrames.Add(new OsuReplayFrameWithReason(new OsuReplayFrame(bestFrame.Time, middle, bestFrame.Actions.ToArray()), bestFrame.Reason));
                         }
                     }
 
@@ -235,44 +290,30 @@ namespace osu.Game.Rulesets.Osu.Replays
 
         private Replay postprocessFrames()
         {
-            // will not work with pippi mode on!
-            combineOverlappingObjects();
+            if (!pippiEnabled)
+                combineOverlappingObjects();
+
+            if (pippiEnabled)
+            {
+                // TODO: abstract this better
+                var pippi = new PippiPostprocessor();
+                pippi.Init(this);
+
+                foreach (var f in framesWithReason)
+                {
+                    pippi.Update(f);
+                }
+            }
 
             // TODO: make this configurable
             interpolator.Init(framesWithReason, Frames, this);
 
-            //double lastSliderEndTime = double.NegativeInfinity;
-
             foreach (var f in framesWithReason)
             {
-                /*
-                if (f.Reason == FrameReason.SliderEnd)
-                {
-                    if (Precision.AlmostEquals(lastSliderEndTime, f.Time))
-                    {
-                        lastSliderEndTime = f.Time;
-                        continue; // it's not possible to hit multiple slider ends at once if their radii don't overlap
-                        // TODO: that really needs to be handled better in the future
-                    }
-
-                    lastSliderEndTime = f.Time;
-                }
-                */
-
                 interpolator.Update(f);
 
                 Frames.Add(f);
             }
-
-            // TODO: abstract this better
-            /*
-            var pippi = new PippiPostprocessor();
-            pippi.Init(this);
-            foreach (var f in Frames)
-            {
-                pippi.Update((OsuReplayFrame)f);
-            }
-            */
 
             return Replay;
         }

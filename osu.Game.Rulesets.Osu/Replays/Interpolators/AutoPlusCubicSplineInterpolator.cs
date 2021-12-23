@@ -60,7 +60,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
             for (int i = 0; i < inputFrames.Count; i++)
             {
-                if (i != 0 && Precision.AlmostEquals(inputFrames[i].Time, last, 1))
+                if (i != 0 && Precision.AlmostEquals(inputFrames[i].Time, last, 5))
                     continue;
                 //    prunedFrames.RemoveAt(prunedFrames.Count - 1);
 

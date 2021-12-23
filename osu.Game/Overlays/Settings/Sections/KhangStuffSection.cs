@@ -23,6 +23,11 @@ namespace osu.Game.Overlays.Settings.Sections
                 LabelText = new LocalisableString("Rainbow cursor trail"),
                 Current = config.GetBindable<bool>(OsuSetting.RainbowCursorTrail)
             });
+            Add(new SettingsCheckbox
+            {
+                LabelText = new LocalisableString("Smooth cursor trail"),
+                Current = config.GetBindable<bool>(OsuSetting.SmoothCursorTrail)
+            });
         }
     }
 }

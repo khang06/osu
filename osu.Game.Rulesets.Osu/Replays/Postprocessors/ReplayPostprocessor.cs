@@ -10,6 +10,11 @@ namespace osu.Game.Rulesets.Osu.Replays.Postprocessors
         public OsuAuto2BGenerator AutoGenerator;
         public List<OsuAuto2BGenerator.OsuReplayFrameWithReason> Frames;
 
+        public void Init(OsuAuto2BGenerator autoGenerator)
+        {
+            Init(null, autoGenerator);
+        }
+
         public virtual void Init(List<OsuAuto2BGenerator.OsuReplayFrameWithReason> frames, OsuAuto2BGenerator autoGenerator)
         {
             AutoGenerator = autoGenerator;
@@ -17,6 +22,5 @@ namespace osu.Game.Rulesets.Osu.Replays.Postprocessors
         }
 
         public abstract void Update(OsuReplayFrame frame);
-
     }
 }

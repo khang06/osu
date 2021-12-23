@@ -3,8 +3,10 @@
 
 using System;
 using System.Collections.Generic;
+using osu.Framework.Bindables;
 using osu.Framework.Graphics.Sprites;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Replays;
 using osu.Game.Scoring;
@@ -31,6 +33,11 @@ namespace osu.Game.Rulesets.Mods
         public override Type[] IncompatibleMods => new[] { typeof(ModCinema), typeof(ModRelax), typeof(ModFailCondition), typeof(ModNoFail), typeof(ModAdaptiveSpeed) };
 
         public override bool HasImplementation => GetType().GenericTypeArguments.Length == 0;
+
+        // TODO: i wanted to make this only show on OsuModAutoplay, but ModAutoplay itself also needs a setting item to enable the customization button
+        // so this setting will just do nothing on anything that isn't osu!std
+        [SettingSource("Use 2B Auto", "Uses a custom Autoplay engine if checked. Otherwise, the default Autoplay engine is used.", 0)]
+        public Bindable<bool> Use2B { get; } = new Bindable<bool>(true);
 
         [Obsolete("Override CreateReplayData(IBeatmap, IReadOnlyList<Mod>) instead")] // Can be removed 20220929
         public virtual Score CreateReplayScore(IBeatmap beatmap, IReadOnlyList<Mod> mods) => new Score { Replay = new Replay() };

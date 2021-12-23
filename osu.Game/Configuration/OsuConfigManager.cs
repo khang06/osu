@@ -173,6 +173,7 @@ namespace osu.Game.Configuration
 
             // Khang Stuff
             SetDefault(OsuSetting.RainbowCursorTrail, true);
+            SetDefault(OsuSetting.SmoothCursorTrail, true);
         }
 
         public IDictionary<OsuSetting, string> GetLoggableState() =>
@@ -379,6 +380,7 @@ namespace osu.Game.Configuration
         LastProcessedMetadataId
 
         // custom stuff
-        RainbowCursorTrail
+        RainbowCursorTrail,
+        SmoothCursorTrail
     }
 }

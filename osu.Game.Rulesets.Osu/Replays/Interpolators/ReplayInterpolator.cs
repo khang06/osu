@@ -26,6 +26,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
             foreach (var postprocessor in Postprocessors)
                 postprocessor.Init(inputFrames, autoGenerator);
         }
+
         public abstract void Update(OsuReplayFrame frame);
 
         protected void addFrame(OsuReplayFrame frame)

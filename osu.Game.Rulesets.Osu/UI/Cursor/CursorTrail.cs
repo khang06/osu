@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using osu.Framework.Allocation;
+using osu.Framework.Bindables;
 using osu.Framework.Extensions.EnumExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Primitives;
@@ -42,6 +43,12 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
         private Anchor trailOrigin = Anchor.Centre;
 
+        [Resolved(CanBeNull = true)]
+        private OsuConfigManager config { get; set; }
+
+        protected readonly Bindable<bool> RainbowTrail = new Bindable<bool>();
+        protected readonly Bindable<bool> SmoothTrail = new Bindable<bool>();
+
         protected Anchor TrailOrigin
         {
             get => trailOrigin;
@@ -73,6 +80,9 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
         {
             texture ??= renderer.WhitePixel;
             shader = shaders.Load(@"CursorTrail", FragmentShaderDescriptor.TEXTURE);
+
+            config?.BindWith(OsuSetting.RainbowCursorTrail, RainbowTrail);
+            config?.BindWith(OsuSetting.SmoothCursorTrail, SmoothTrail);
         }
 
         protected override void LoadComplete()
@@ -175,11 +185,8 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                     float distance = diff.Length;
                     Vector2 direction = diff / distance;
 
-                    // TODO: make this configurable
-                    const bool smooth_cursor = true;
-
                     float interval = partSize.X / 2.5f * IntervalMultiplier;
-                    if (smooth_cursor)
+                    if (SmoothTrail.Value)
                         interval /= 2.0f;
                     float stopAt = distance - (AvoidDrawingNearCursor ? interval : 0);
 
@@ -238,18 +245,9 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
 
             private IVertexBatch<TexturedTrailVertex> vertexBatch;
 
-            private bool rainbowTrail = true;
-
             public TrailDrawNode(CursorTrail source)
                 : base(source)
             {
-            }
-
-            [BackgroundDependencyLoader(true)]
-            private void load(OsuConfigManager config)
-            {
-                // TODO: fix config shit
-                rainbowTrail = config?.Get<bool>(OsuSetting.RainbowCursorTrail) ?? true;
             }
 
             public override void ApplyState()
@@ -300,6 +298,8 @@ namespace osu.Game.Rulesets.Osu.UI.Cursor
                         continue;
 
                     var color = Color4.White;
+                    bool rainbowTrail = Source.RainbowTrail.Value;
+
                     if (rainbowTrail)
                     {
                         float partTime = part.Time;
