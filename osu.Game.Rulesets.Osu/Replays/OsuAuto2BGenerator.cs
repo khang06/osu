@@ -20,7 +20,6 @@ namespace osu.Game.Rulesets.Osu.Replays
 
         private List<OsuReplayFrameWithReason> framesWithReason = new List<OsuReplayFrameWithReason>();
 
-        // TODO: make this configurable
         private readonly ReplayInterpolator interpolator;
 
         // TODO: doesn't handle dynamic circle size...
@@ -35,6 +34,7 @@ namespace osu.Game.Rulesets.Osu.Replays
             {
                 OsuModAutoplay.InterpolationStyle.CatmullRom => new CatmullRomInterpolator(),
                 OsuModAutoplay.InterpolationStyle.Cosine => new CosineInterpolator(),
+                OsuModAutoplay.InterpolationStyle.ConstrainedCubicSpline => new ConstrainedCubicSplineInterpolator(),
                 OsuModAutoplay.InterpolationStyle.CubicSplineAutoPlus => new AutoPlusCubicSplineInterpolator(),
                 OsuModAutoplay.InterpolationStyle.CubicSplineDanser => new CubicSplineInterpolator(),
                 OsuModAutoplay.InterpolationStyle.Dummy => new DummyInterpolator(),
@@ -109,10 +109,9 @@ namespace osu.Game.Rulesets.Osu.Replays
                                 double tickTime = n.StartTime;
                                 var posAtTime = s.StackedPositionAt(Math.Floor(tickTime - s.StartTime) / sliderLength);
 
-                                // HACK: super shitty hack to fc xnor xnor xnor [earth]
-                                // AutoPlusCubicSplineInterpolator seems to try to go way too fast here and slider breaks without this hack
-                                if (reason == FrameReason.SliderTick)
-                                    addFrameWithReason(new OsuReplayFrame(tickTime - 1, posAtTime, OsuAction.LeftButton), reason);
+                                // HACK: it's not guaranteed that the slider will be tracked at the time of the tick
+                                // so the cursor has to be on the slider ball on the previous update frame to guarantee tracking
+                                addFrameWithReason(new OsuReplayFrame(tickTime - 1, posAtTime, OsuAction.LeftButton), reason);
                                 addFrameWithReason(new OsuReplayFrame(tickTime, posAtTime, OsuAction.LeftButton), reason);
 
                                 if (reason == FrameReason.SliderTick)
@@ -175,7 +174,7 @@ namespace osu.Game.Rulesets.Osu.Replays
                     {
                         foreach (var y in queuedFrames)
                         {
-                            if (Vector2.Distance(x.Position, y.Position) > CircleSize)
+                            if (Vector2.Distance(x.Position, y.Position) >= CircleSize)
                             {
                                 overlapping = false;
                                 break;
@@ -200,10 +199,30 @@ namespace osu.Game.Rulesets.Osu.Replays
 
                         Vector2 middle = new Vector2((float)(midX / queuedFrames.Count), (float)(midY / queuedFrames.Count));
 
-                        // append to new frames
+                        // make sure that the middle ACTUALLY overlaps every circle
                         foreach (var x in queuedFrames)
                         {
-                            newFrames.Add(new OsuReplayFrameWithReason(new OsuReplayFrame(x.Time, middle, x.Actions.ToArray()), x.Reason));
+                            if (Vector2.Distance(x.Position, middle) >= CircleSize)
+                            {
+                                overlapping = false;
+                                break;
+                            }
+                        }
+
+                        // append to new frames
+                        if (overlapping)
+                        {
+                            foreach (var x in queuedFrames)
+                            {
+                                newFrames.Add(new OsuReplayFrameWithReason(new OsuReplayFrame(x.Time, middle, x.Actions.ToArray()), x.Reason));
+                            }
+                        }
+                        else
+                        {
+                            foreach (var x in queuedFrames)
+                            {
+                                newFrames.Add(x);
+                            }
                         }
                     }
                     else
@@ -306,7 +325,7 @@ namespace osu.Game.Rulesets.Osu.Replays
             }
 
             // TODO: make this configurable
-            interpolator.Init(framesWithReason, Frames, this);
+            interpolator.Init(framesWithReason, Frames, this, new BounceOffEdgesPostprocessor());
 
             foreach (var f in framesWithReason)
             {

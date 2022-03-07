@@ -40,6 +40,7 @@ namespace osu.Game.Rulesets.Osu.Mods
         {
             CatmullRom,
             Cosine,
+            ConstrainedCubicSpline,
             CubicSplineAutoPlus,
             CubicSplineDanser,
             Dummy,

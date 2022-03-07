@@ -8,7 +8,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 {
     public class HalfCircleInterpolator : ReplayInterpolator
     {
-        private readonly bool brokenMode = false; // it looked cool
+        private readonly bool brokenMode = true; // it looked cool
         private bool inverted = false;
         private double lastTime = double.NegativeInfinity;
 
