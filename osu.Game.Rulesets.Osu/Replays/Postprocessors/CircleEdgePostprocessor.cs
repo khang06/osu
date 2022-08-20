@@ -17,6 +17,9 @@ namespace osu.Game.Rulesets.Osu.Replays.Postprocessors
 
         public override void Update(OsuReplayFrame frame)
         {
+            if (AutoGenerator == null)
+                return;
+
             if (Precision.AlmostEquals(frame.Time, lastTime, 1))
             {
                 frame.Position = lastPosOffset ?? Vector2.Zero;

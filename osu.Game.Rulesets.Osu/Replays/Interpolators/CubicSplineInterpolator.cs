@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
+
+using System;
 using System.Collections.Generic;
 using osu.Framework.Utils;
 using osu.Game.Rulesets.Osu.Replays.Postprocessors;
@@ -10,7 +13,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
     // port from danser
     public class CubicSplineInterpolator : ReplayInterpolator
     {
-        private Spline path;
+        private Spline? path = null;
 
         private double lastTime = double.NegativeInfinity;
 
@@ -242,7 +245,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
         public override void Update(OsuReplayFrame frame)
         {
-            if (OutputFrames.Count == 0)
+            if (path == null || InputFrames == null || OutputFrames == null || OutputFrames.Count == 0)
                 return;
 
             if (Precision.AlmostEquals(frame.Time, lastTime, 1))
@@ -257,7 +260,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
             {
                 float p = (float)((t - InputFrames[0].Time) / (InputFrames[^1].Time - InputFrames[0].Time));
                 var pos = path.PointAt(p);
-                addFrame(new OsuReplayFrame(t, pos, frame.Actions.ToArray()));
+                AddFrame(new OsuReplayFrame(t, pos, frame.Actions.ToArray()));
             }
         }
     }

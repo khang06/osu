@@ -1,6 +1,8 @@
-﻿using System;
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
+
+using System;
 using System.Collections.Generic;
-using System.Text;
 using osu.Framework.Utils;
 using osu.Game.Rulesets.Osu.Replays.Postprocessors;
 using osu.Game.Rulesets.Replays;
@@ -11,7 +13,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
     // mostly just ripped from osu-framework implementation
     public class CatmullRomInterpolator : ReplayInterpolator
     {
-        private List<CatmullParams> catmullParams = null;
+        private List<CatmullParams>? catmullParams = null;
 
         private double lastTime = double.NegativeInfinity;
 
@@ -83,7 +85,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
         public override void Update(OsuReplayFrame frame)
         {
-            if (OutputFrames.Count == 0)
+            if (catmullParams == null || OutputFrames == null || OutputFrames.Count == 0)
                 return;
 
             if (Precision.AlmostEquals(frame.Time, lastTime, 1))
@@ -105,7 +107,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
                 //float p = (float)((t - lastParamTime) / (catParams.Time - lastParamTime));
                 float p = (float)((t - catParams.Time) / (nextParamTime - catParams.Time));
                 var pos = catParams.Evaluate(p);
-                addFrame(new OsuReplayFrame(t, pos, frame.Actions.ToArray()));
+                AddFrame(new OsuReplayFrame(t, pos, frame.Actions.ToArray()));
             }
         }
     }

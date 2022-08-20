@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
+
+using System;
 using System.Collections.Generic;
 using System.Text;
 using osu.Framework.Utils;
@@ -14,8 +17,8 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
         // i don't actually understand the math behind this, so this uses two separate splines for two axises
         // SplineX -> (time, pos.X)
         // SplineY -> (time, pos.Y)
-        public ConstrainedCubicSpline SplineX;
-        public ConstrainedCubicSpline SplineY;
+        public ConstrainedCubicSpline SplineX = new ConstrainedCubicSpline(new Point[0]);
+        public ConstrainedCubicSpline SplineY = new ConstrainedCubicSpline(new Point[0]);
 
         private double lastTime = double.NegativeInfinity;
 
@@ -43,7 +46,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
         public override void Update(OsuReplayFrame frame)
         {
-            if (OutputFrames.Count == 0)
+            if (OutputFrames == null || OutputFrames.Count == 0)
                 return;
 
             if (Precision.AlmostEquals(frame.Time, lastTime))
@@ -54,7 +57,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
             for (double t = lastFrame.Time + FrameInterval; t < frame.Time; t += FrameInterval)
             {
                 var pos = new Vector2((float)SplineX.Evaluate(t), (float)SplineY.Evaluate(t));
-                addFrame(new OsuReplayFrame(t, pos, frame.Actions.ToArray()));
+                AddFrame(new OsuReplayFrame(t, pos, frame.Actions.ToArray()));
             }
         }
 

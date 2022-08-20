@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
+
+using System;
 using System.Collections.Generic;
 using System.Text;
 using osu.Framework.Utils;
@@ -17,7 +20,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
         public override void Update(OsuReplayFrame frame)
         {
-            if (OutputFrames.Count == 0)
+            if (OutputFrames == null || OutputFrames.Count == 0)
                 return;
 
             if (Precision.AlmostEquals(frame.Time, lastTime))
@@ -41,7 +44,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
                 double newAngle = initialAngle + offsetAngle;
                 var offset = new Vector2((float)(Math.Cos(newAngle) * radius), (float)(Math.Sin(newAngle) * radius));
                 var output = midpoint + offset;
-                addFrame(new OsuReplayFrame(t, output, frame.Actions.ToArray()));
+                AddFrame(new OsuReplayFrame(t, output, frame.Actions.ToArray()));
             }
             lastPos = frame.Position;
             if (!samePos)

@@ -1,3 +1,5 @@
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
 
 using System;
 using System.Collections.Generic;
@@ -14,6 +16,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
     {
         // port of Auto+'s interpolator
 
+#pragma warning disable IDE1006
         protected struct SplinePoints
         {
             public unsafe double* ts;
@@ -26,6 +29,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
             private IntPtr private_data;
         }
+#pragma warning restore IDE1006
 
         protected SplinePoints Spline;
 
@@ -112,7 +116,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
 
         public override void Update(OsuReplayFrame frame)
         {
-            if (OutputFrames.Count == 0)
+            if (OutputFrames == null || OutputFrames.Count == 0)
                 return;
 
             if (Precision.AlmostEquals(frame.Time, lastTime, 1))
@@ -125,7 +129,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
             for (double t = lastFrame.Time + FrameInterval; t < frame.Time; t += FrameInterval)
             {
                 var pos = positionAtTime(t);
-                addFrame(new OsuReplayFrame(t, pos, frame.Actions.ToArray()));
+                AddFrame(new OsuReplayFrame(t, pos, frame.Actions.ToArray()));
             }
         }
     }

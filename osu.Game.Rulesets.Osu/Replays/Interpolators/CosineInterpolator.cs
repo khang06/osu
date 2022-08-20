@@ -1,6 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// See the LICENCE file in the repository root for full licence text.
+
+using System;
 using osuTK;
 
 namespace osu.Game.Rulesets.Osu.Replays.Interpolators
@@ -10,7 +11,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
     {
         public override void Update(OsuReplayFrame frame)
         {
-            if (OutputFrames.Count == 0)
+            if (OutputFrames == null || OutputFrames.Count == 0)
                 return;
 
             var lastFrame = (OsuReplayFrame)OutputFrames[^1];
@@ -22,7 +23,7 @@ namespace osu.Game.Rulesets.Osu.Replays.Interpolators
                 double p = (t - lastFrame.Time) / (frame.Time - lastFrame.Time);
                 double p2 = (1 - Math.Cos(p * Math.PI)) / 2;
                 var pos = new Vector2((float)(pos1.X * (1 - p2) + pos2.X * p2), (float)(pos1.Y * (1 - p2) + pos2.Y * p2));
-                addFrame(new OsuReplayFrame(t, pos, frame.Actions.ToArray()));
+                AddFrame(new OsuReplayFrame(t, pos, frame.Actions.ToArray()));
             }
         }
     }
