@@ -45,7 +45,7 @@ namespace osu.Game.Beatmaps.ControlPoints
         public override bool IsRedundant(ControlPoint? existing)
             => existing is DifficultyControlPoint existingDifficulty
                && SliderVelocity == existingDifficulty.SliderVelocity
-               && GenerateTicks;
+               && GenerateTicks == existingDifficulty.GenerateTicks;
 
         public override void CopyFrom(ControlPoint other)
         {
